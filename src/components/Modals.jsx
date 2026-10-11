@@ -4,22 +4,30 @@ import { api } from '../services/api';
 
 // 1. Add Vehicle Modal
 export function AddVehicleModal({ isOpen, onClose, onRefresh }) {
+  const PHOTO_PRESETS = [
+    { label: 'White Civic', url: '/images/civic-2019.jpg' },
+    { label: 'Black BMW 330i', url: '/images/bmw-330i.jpg' },
+    { label: 'Track Tuned Civic', url: '/images/build-civic.jpg' },
+    { label: 'Stock Civic', url: '/images/compare-stock.jpg' }
+  ];
+
   const [formData, setFormData] = useState({
-    make: '',
-    model: '',
+    make: 'Toyota',
+    model: 'Supra',
     year: 2024,
-    trim: 'Sport',
-    registrationNumber: '',
+    trim: '3.0 Premium',
+    registrationNumber: 'TS 08 GR 8888',
     fuelType: 'Petrol',
-    engineCapacity: '2.0 L Turbo',
-    odometerKm: 5000,
+    engineCapacity: '3.0 L Turbo',
+    odometerKm: 4500,
     transmission: 'Automatic',
     isPrimary: false,
-    statusBadge: 'Project',
+    statusBadge: 'Project Build',
     imageUrl: '/images/bmw-330i.jpg',
-    notes: ''
+    notes: 'Twin-scroll turbo build project for weekend circuit days.'
   });
   const [loading, setLoading] = useState(false);
+  const [successMsg, setSuccessMsg] = useState(false);
 
   if (!isOpen) return null;
 
@@ -28,8 +36,12 @@ export function AddVehicleModal({ isOpen, onClose, onRefresh }) {
     setLoading(true);
     try {
       await api.createVehicle(formData);
-      onRefresh();
-      onClose();
+      setSuccessMsg(true);
+      setTimeout(() => {
+        setSuccessMsg(false);
+        onRefresh();
+        onClose();
+      }, 600);
     } catch (err) {
       alert('Error creating vehicle: ' + err.message);
     } finally {
@@ -39,18 +51,63 @@ export function AddVehicleModal({ isOpen, onClose, onRefresh }) {
 
   return (
     <div className="modal-overlay">
-      <div className="modal-box">
+      <div className="modal-box" style={{ maxWidth: 540 }}>
         <div className="modal-title-row">
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <Car size={20} color="#2563eb" />
-            <h3 style={{ fontSize: 17, fontWeight: 700 }}>Add New Vehicle</h3>
+            <h3 style={{ fontSize: 17, fontWeight: 700 }}>Register New Vehicle</h3>
           </div>
           <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
             <X size={20} color="#64748b" />
           </button>
         </div>
 
+        {successMsg && (
+          <div style={{ background: '#ecfdf5', color: '#065f46', padding: '10px 14px', borderRadius: 8, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 600 }}>
+            <CheckCircle2 size={16} color="#10b981" /> Vehicle registered and added to garage fleet!
+          </div>
+        )}
+
         <form onSubmit={handleSubmit}>
+          {/* Photo Preset Selector */}
+          <div className="form-group" style={{ marginBottom: 14 }}>
+            <label className="form-label" style={{ marginBottom: 6 }}>Select Vehicle Photo Preset</label>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 8 }}>
+              {PHOTO_PRESETS.map((p) => (
+                <button
+                  key={p.url}
+                  type="button"
+                  onClick={() => setFormData({ ...formData, imageUrl: p.url })}
+                  style={{
+                    padding: '5px 10px',
+                    borderRadius: 6,
+                    border: formData.imageUrl === p.url ? '2px solid #2563eb' : '1px solid #cbd5e1',
+                    background: formData.imageUrl === p.url ? '#eff6ff' : '#fff',
+                    color: formData.imageUrl === p.url ? '#1d4ed8' : '#475569',
+                    fontSize: 12,
+                    fontWeight: 600,
+                    cursor: 'pointer'
+                  }}
+                >
+                  {p.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Live photo preview */}
+            <div style={{ position: 'relative', width: '100%', height: 110, borderRadius: 8, overflow: 'hidden', border: '1px solid #e2e8f0', background: '#f8fafc' }}>
+              <img
+                src={formData.imageUrl || '/images/civic-2019.jpg'}
+                alt="Preview"
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                onError={(e) => { e.target.src = '/images/civic-2019.jpg'; }}
+              />
+              <span style={{ position: 'absolute', bottom: 6, left: 8, background: 'rgba(0,0,0,0.65)', color: '#fff', fontSize: 11, padding: '2px 8px', borderRadius: 4 }}>
+                Photo Preview
+              </span>
+            </div>
+          </div>
+
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <div className="form-group">
               <label className="form-label">Make</label>
@@ -147,8 +204,8 @@ export function AddVehicleModal({ isOpen, onClose, onRefresh }) {
                 value={formData.transmission}
                 onChange={(e) => setFormData({ ...formData, transmission: e.target.value })}
               >
-                <option>Manual</option>
                 <option>Automatic</option>
+                <option>Manual</option>
                 <option>DCT</option>
                 <option>CVT</option>
               </select>
@@ -163,16 +220,18 @@ export function AddVehicleModal({ isOpen, onClose, onRefresh }) {
                 <option>Primary</option>
                 <option>Secondary</option>
                 <option>Project Build</option>
+                <option>Daily Driver</option>
               </select>
             </div>
           </div>
 
           <div className="form-group">
-            <label className="form-label">Vehicle Photo URL</label>
+            <label className="form-label">Vehicle Notes / Build Plan</label>
             <input
               className="form-input"
-              value={formData.imageUrl}
-              onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
+              placeholder="e.g. Scheduled for Stage 2 map and coilover fitment."
+              value={formData.notes}
+              onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
             />
           </div>
 
@@ -185,6 +244,100 @@ export function AddVehicleModal({ isOpen, onClose, onRefresh }) {
             </button>
           </div>
         </form>
+      </div>
+    </div>
+  );
+}
+
+// 1.1 Vehicle Details & Management Modal
+export function VehicleDetailsModal({ isOpen, onClose, vehicle, onRefresh }) {
+  if (!isOpen || !vehicle) return null;
+
+  const handleSetPrimary = async () => {
+    await api.updateVehicle(vehicle.id, { isPrimary: true, statusBadge: 'Primary' });
+    onRefresh();
+    onClose();
+  };
+
+  const handleDelete = async () => {
+    if (confirm(`Remove ${vehicle.make} ${vehicle.model} (${vehicle.registrationNumber}) from your garage?`)) {
+      await api.deleteVehicle(vehicle.id);
+      onRefresh();
+      onClose();
+    }
+  };
+
+  return (
+    <div className="modal-overlay">
+      <div className="modal-box" style={{ maxWidth: 560 }}>
+        <div className="modal-title-row">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <Car size={20} color="#2563eb" />
+            <h3 style={{ fontSize: 17, fontWeight: 700 }}>
+              {vehicle.make} {vehicle.model} {vehicle.year}
+            </h3>
+          </div>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
+            <X size={20} color="#64748b" />
+          </button>
+        </div>
+
+        <div style={{ borderRadius: 10, overflow: 'hidden', height: 180, marginBottom: 14 }}>
+          <img
+            src={vehicle.imageUrl || '/images/civic-2019.jpg'}
+            alt={vehicle.model}
+            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+            onError={(e) => { e.target.src = '/images/civic-2019.jpg'; }}
+          />
+        </div>
+
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+          <div>
+            <div style={{ fontSize: 15, fontWeight: 700, color: '#0f172a' }}>{vehicle.registrationNumber}</div>
+            <div style={{ fontSize: 12, color: '#64748b' }}>{vehicle.trim || 'Standard Trim'}</div>
+          </div>
+          <span className={`tag-badge ${vehicle.isPrimary ? 'blue' : 'emerald'}`}>
+            {vehicle.statusBadge || (vehicle.isPrimary ? 'Primary' : 'Secondary')}
+          </span>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, background: '#f8fafc', padding: 12, borderRadius: 8, marginBottom: 14, fontSize: 13 }}>
+          <div><span style={{ color: '#64748b' }}>Fuel:</span> <strong>{vehicle.fuelType || 'Petrol'}</strong></div>
+          <div><span style={{ color: '#64748b' }}>Engine:</span> <strong>{vehicle.engineCapacity || '2.0 L'}</strong></div>
+          <div><span style={{ color: '#64748b' }}>Odometer:</span> <strong>{(vehicle.odometerKm || 0).toLocaleString()} km</strong></div>
+          <div><span style={{ color: '#64748b' }}>Transmission:</span> <strong>{vehicle.transmission || 'Automatic'}</strong></div>
+        </div>
+
+        {vehicle.notes && (
+          <div style={{ fontSize: 12.5, color: '#475569', marginBottom: 14, padding: '8px 12px', background: '#f1f5f9', borderRadius: 6 }}>
+            <strong>Notes:</strong> {vehicle.notes}
+          </div>
+        )}
+
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 10 }}>
+          <button
+            type="button"
+            onClick={handleDelete}
+            style={{ background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca', padding: '7px 12px', borderRadius: 6, fontSize: 12.5, fontWeight: 600, cursor: 'pointer' }}
+          >
+            Delete Vehicle
+          </button>
+          <div style={{ display: 'flex', gap: 8 }}>
+            {!vehicle.isPrimary && (
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={handleSetPrimary}
+                style={{ fontSize: 12.5 }}
+              >
+                Set as Primary
+              </button>
+            )}
+            <button type="button" className="btn-primary" onClick={onClose} style={{ fontSize: 12.5 }}>
+              Close
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );

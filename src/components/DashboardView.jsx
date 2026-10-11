@@ -23,10 +23,22 @@ export default function DashboardView({
   onOpenModal,
   setActiveNav,
   onLikeCommunityPost,
-  onBookmarkCommunityPost
+  onBookmarkCommunityPost,
+  onSelectVehicle,
+  searchQuery = ''
 }) {
   const data = dashboardData || {};
-  const vehicles = data.vehicles || [];
+  const rawVehicles = data.vehicles || [];
+  const vehicles = rawVehicles.filter(v => {
+    if (!searchQuery) return true;
+    const q = searchQuery.toLowerCase();
+    return (
+      v.make?.toLowerCase().includes(q) ||
+      v.model?.toLowerCase().includes(q) ||
+      v.registrationNumber?.toLowerCase().includes(q) ||
+      v.statusBadge?.toLowerCase().includes(q)
+    );
+  });
   const upcomingMaintenance = data.upcomingMaintenance || [];
   const recentActivities = data.recentActivities || [];
   const recentModifications = data.recentModifications || [];
@@ -144,7 +156,7 @@ export default function DashboardView({
               </div>
 
               <div className="vehicles-grid-inner">
-                {vehicles.slice(0, 2).map((vehicle) => {
+                {vehicles.map((vehicle) => {
                   const vehicleImg = vehicle.imageUrl && !vehicle.imageUrl.includes('unsplash')
                     ? vehicle.imageUrl
                     : (vehicle.model?.toLowerCase().includes('civic') || vehicle.make?.toLowerCase().includes('honda')
@@ -157,6 +169,7 @@ export default function DashboardView({
                         src={vehicleImg}
                         alt={`${vehicle.make} ${vehicle.model}`}
                         className="vehicle-img"
+                        onError={(e) => { e.target.src = '/images/civic-2019.jpg'; }}
                       />
                     </div>
                     <div className="vehicle-content">
@@ -169,7 +182,13 @@ export default function DashboardView({
                             {vehicle.statusBadge || (vehicle.isPrimary ? 'Primary' : 'Secondary')}
                           </span>
                         </div>
-                        <MoreHorizontal size={15} color="#94a3b8" style={{ cursor: 'pointer' }} />
+                        <MoreHorizontal
+                          size={15}
+                          color="#94a3b8"
+                          style={{ cursor: 'pointer' }}
+                          onClick={() => onSelectVehicle && onSelectVehicle(vehicle)}
+                          title="Vehicle Options"
+                        />
                       </div>
 
                       <div className="vehicle-reg">{vehicle.registrationNumber}</div>
@@ -191,7 +210,7 @@ export default function DashboardView({
 
                       <button
                         className="vehicle-view-link"
-                        onClick={() => setActiveNav('My Garage')}
+                        onClick={() => onSelectVehicle ? onSelectVehicle(vehicle) : setActiveNav('My Garage')}
                         style={{ background: 'none', border: 'none', padding: 0 }}
                       >
                         View Details <ChevronRight size={13} />

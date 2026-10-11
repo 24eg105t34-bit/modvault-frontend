@@ -34,6 +34,7 @@ import {
 } from './components/OtherViews';
 import {
   AddVehicleModal,
+  VehicleDetailsModal,
   AddModificationModal,
   LogMaintenanceModal,
   AddFuelExpenseModal,
@@ -183,10 +184,11 @@ export default function App() {
   const [darkMode, setDarkMode] = useState(false);
   const [dashboardData, setDashboardData] = useState(DEFAULT_DASHBOARD_DATA);
   const [comparisonData, setComparisonData] = useState(DEFAULT_COMPARISON_DATA);
+  const [selectedVehicle, setSelectedVehicle] = useState(null);
   const [loading, setLoading] = useState(false);
 
   // Modal states
-  const [activeModal, setActiveModal] = useState(null); // 'addVehicle', 'addMod', 'logMaintenance', 'addFuel', 'costCalc', 'compatCheck', 'compareBuilds'
+  const [activeModal, setActiveModal] = useState(null); // 'addVehicle', 'vehicleDetails', 'addMod', 'logMaintenance', 'addFuel', 'costCalc', 'compatCheck', 'compareBuilds'
   const [showUserMenu, setShowUserMenu] = useState(false);
 
   const loadData = async () => {
@@ -195,7 +197,7 @@ export default function App() {
         api.getDashboard(),
         api.getBuildComparison()
       ]);
-      if (dash && dash.vehicles && dash.vehicles.length > 0) {
+      if (dash) {
         setDashboardData(dash);
       }
       if (comp) {
@@ -203,7 +205,6 @@ export default function App() {
       }
     } catch (err) {
       console.warn('Backend API connection note (using screenshot-perfect local data):', err);
-      // Keep DEFAULT_DASHBOARD_DATA so the UI never displays blank cards or missing car images!
     } finally {
       setLoading(false);
     }
@@ -490,6 +491,8 @@ export default function App() {
                 setActiveNav={setActiveNav}
                 onLikeCommunityPost={handleLikePost}
                 onBookmarkCommunityPost={handleBookmarkPost}
+                onSelectVehicle={(v) => { setSelectedVehicle(v); setActiveModal('vehicleDetails'); }}
+                searchQuery={searchQuery}
               />
             )}
 
@@ -498,6 +501,8 @@ export default function App() {
                 vehicles={dashboardData?.vehicles || []}
                 onRefresh={loadData}
                 onOpenAdd={() => setActiveModal('addVehicle')}
+                onSelectVehicle={(v) => { setSelectedVehicle(v); setActiveModal('vehicleDetails'); }}
+                searchQuery={searchQuery}
               />
             )}
 
@@ -506,6 +511,7 @@ export default function App() {
                 modifications={dashboardData?.recentModifications || []}
                 onRefresh={loadData}
                 onOpenAdd={() => setActiveModal('addMod')}
+                searchQuery={searchQuery}
               />
             )}
 
@@ -519,6 +525,7 @@ export default function App() {
 
             {activeNav === 'Fuel & Expenses' && (
               <FuelExpensesView
+                dashboardData={dashboardData}
                 onOpenAdd={() => setActiveModal('addFuel')}
               />
             )}
@@ -550,6 +557,13 @@ export default function App() {
       {/* 3. Modals */}
       <AddVehicleModal
         isOpen={activeModal === 'addVehicle'}
+        onClose={() => setActiveModal(null)}
+        onRefresh={loadData}
+      />
+
+      <VehicleDetailsModal
+        isOpen={activeModal === 'vehicleDetails'}
+        vehicle={selectedVehicle}
         onClose={() => setActiveModal(null)}
         onRefresh={loadData}
       />

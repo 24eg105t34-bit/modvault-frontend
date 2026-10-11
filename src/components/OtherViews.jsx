@@ -1,18 +1,31 @@
 import React, { useState } from 'react';
 import {
   Car, Wrench, Fuel, CreditCard, Plus, Trash2, Edit3, CheckCircle2,
-  AlertCircle, ShieldCheck, Download, Calculator, BarChart2, MessageSquare, ThumbsUp
+  AlertCircle, ShieldCheck, Download, Calculator, BarChart2, MessageSquare, ThumbsUp, ChevronRight
 } from 'lucide-react';
 import { api } from '../services/api';
 
 // 1. Garage View
-export function GarageView({ vehicles, onRefresh, onOpenAdd }) {
+export function GarageView({ vehicles, onRefresh, onOpenAdd, onSelectVehicle, searchQuery = '' }) {
+  const filtered = vehicles.filter(v => {
+    if (!searchQuery) return true;
+    const q = searchQuery.toLowerCase();
+    return (
+      v.make?.toLowerCase().includes(q) ||
+      v.model?.toLowerCase().includes(q) ||
+      v.registrationNumber?.toLowerCase().includes(q) ||
+      v.statusBadge?.toLowerCase().includes(q)
+    );
+  });
+
   return (
     <div className="page-body">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
         <div>
           <h1 className="greeting-title">My Garage Fleet</h1>
-          <p className="greeting-subtitle">Manage all registered vehicles, trims, and specifications.</p>
+          <p className="greeting-subtitle">
+            {filtered.length} {filtered.length === 1 ? 'vehicle' : 'vehicles'} registered with active performance telemetry.
+          </p>
         </div>
         <button className="btn-primary" onClick={onOpenAdd}>
           <Plus size={16} /> Register Vehicle
@@ -20,46 +33,94 @@ export function GarageView({ vehicles, onRefresh, onOpenAdd }) {
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: 20 }}>
-        {vehicles.map((v) => (
-          <div key={v.id} className="vehicle-card-item">
-            <div className="vehicle-img-wrapper" style={{ height: 180 }}>
-              <img
-                src={v.imageUrl && !v.imageUrl.includes('unsplash')
-                  ? v.imageUrl
-                  : (v.model?.toLowerCase().includes('civic') || v.make?.toLowerCase().includes('honda')
-                      ? '/images/civic-2019.jpg'
-                      : '/images/bmw-330i.jpg')}
-                alt={v.model}
-                className="vehicle-img"
-              />
-            </div>
-            <div className="vehicle-content" style={{ padding: 18 }}>
-              <div className="vehicle-title-row">
-                <span className="vehicle-name" style={{ fontSize: 16 }}>{v.make} {v.model} {v.year}</span>
-                <span className={`tag-badge ${v.isPrimary ? 'blue' : 'emerald'}`}>{v.statusBadge}</span>
+        {filtered.map((v) => {
+          const vehicleImg = v.imageUrl && !v.imageUrl.includes('unsplash')
+            ? v.imageUrl
+            : (v.model?.toLowerCase().includes('civic') || v.make?.toLowerCase().includes('honda')
+                ? '/images/civic-2019.jpg'
+                : '/images/bmw-330i.jpg');
+          return (
+            <div key={v.id} className="vehicle-card-item">
+              <div className="vehicle-img-wrapper" style={{ height: 180 }}>
+                <img
+                  src={vehicleImg}
+                  alt={v.model}
+                  className="vehicle-img"
+                  onError={(e) => { e.target.src = '/images/civic-2019.jpg'; }}
+                />
               </div>
-              <div className="vehicle-reg" style={{ fontSize: 13 }}>{v.registrationNumber}</div>
-              <p style={{ fontSize: 12, color: '#64748b' }}>{v.notes}</p>
+              <div className="vehicle-content" style={{ padding: 18 }}>
+                <div className="vehicle-title-row">
+                  <span className="vehicle-name" style={{ fontSize: 16 }}>{v.make} {v.model} {v.year}</span>
+                  <span className={`tag-badge ${v.isPrimary ? 'blue' : 'emerald'}`}>
+                    {v.statusBadge || (v.isPrimary ? 'Primary' : 'Secondary')}
+                  </span>
+                </div>
+                <div className="vehicle-reg" style={{ fontSize: 13 }}>{v.registrationNumber}</div>
+                <p style={{ fontSize: 12, color: '#64748b', minHeight: 32 }}>{v.notes || 'Registered in garage fleet.'}</p>
 
-              <div className="vehicle-specs-grid" style={{ marginTop: 8 }}>
-                <div className="vehicle-spec-pill"><Fuel size={13} /> {v.fuelType}</div>
-                <div className="vehicle-spec-pill"><Car size={13} /> {v.engineCapacity}</div>
-                <div className="vehicle-spec-pill"><Wrench size={13} /> {v.odometerKm?.toLocaleString()} km</div>
-                <div className="vehicle-spec-pill"><CreditCard size={13} /> {v.transmission}</div>
+                <div className="vehicle-specs-grid" style={{ marginTop: 8 }}>
+                  <div className="vehicle-spec-pill"><Fuel size={13} /> {v.fuelType || 'Petrol'}</div>
+                  <div className="vehicle-spec-pill"><Car size={13} /> {v.engineCapacity || '2.0 L'}</div>
+                  <div className="vehicle-spec-pill"><Wrench size={13} /> {(v.odometerKm || 0).toLocaleString()} km</div>
+                  <div className="vehicle-spec-pill"><CreditCard size={13} /> {v.transmission || 'Automatic'}</div>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 14, paddingTop: 10, borderTop: '1px solid #f1f5f9' }}>
+                  <button
+                    className="vehicle-view-link"
+                    onClick={() => onSelectVehicle ? onSelectVehicle(v) : null}
+                    style={{ background: 'none', border: 'none', padding: 0 }}
+                  >
+                    View Details <ChevronRight size={13} />
+                  </button>
+
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    {!v.isPrimary && (
+                      <button
+                        onClick={async () => {
+                          await api.updateVehicle(v.id, { isPrimary: true, statusBadge: 'Primary' });
+                          onRefresh();
+                        }}
+                        style={{ fontSize: 11, background: '#eff6ff', color: '#2563eb', border: '1px solid #bfdbfe', borderRadius: 4, padding: '3px 8px', cursor: 'pointer', fontWeight: 600 }}
+                      >
+                        Set Primary
+                      </button>
+                    )}
+                    <button
+                      onClick={async () => {
+                        if (confirm(`Remove ${v.make} ${v.model} from garage?`)) {
+                          await api.deleteVehicle(v.id);
+                          onRefresh();
+                        }
+                      }}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', padding: '3px 6px' }}
+                      title="Remove Vehicle"
+                    >
+                      <Trash2 size={15} />
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
 }
 
 // 2. Modifications View
-export function ModificationsView({ modifications, onRefresh, onOpenAdd }) {
+export function ModificationsView({ modifications, onRefresh, onOpenAdd, searchQuery = '' }) {
+  const filtered = modifications.filter(m => {
+    if (!searchQuery) return true;
+    const q = searchQuery.toLowerCase();
+    return m.partName?.toLowerCase().includes(q) || m.category?.toLowerCase().includes(q);
+  });
+
   return (
     <div className="page-body">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
         <div>
           <h1 className="greeting-title">Build Planner & Modifications</h1>
           <p className="greeting-subtitle">Track aftermarket performance parts, suspension, and aesthetic upgrades.</p>
@@ -81,7 +142,7 @@ export function ModificationsView({ modifications, onRefresh, onOpenAdd }) {
             </tr>
           </thead>
           <tbody>
-            {modifications.map((m) => (
+            {filtered.map((m) => (
               <tr key={m.id}>
                 <td style={{ fontWeight: 600, fontSize: 13.5 }}>{m.partName}</td>
                 <td><span className="build-tag-pill">{m.category}</span></td>
@@ -90,7 +151,7 @@ export function ModificationsView({ modifications, onRefresh, onOpenAdd }) {
                     {m.status}
                   </span>
                 </td>
-                <td style={{ fontWeight: 700, fontSize: 14 }}>₹ {m.cost?.toLocaleString()}</td>
+                <td style={{ fontWeight: 700, fontSize: 14 }}>₹ {Number(m.cost || 0).toLocaleString()}</td>
                 <td>
                   <button
                     onClick={async () => {
@@ -100,6 +161,7 @@ export function ModificationsView({ modifications, onRefresh, onOpenAdd }) {
                       }
                     }}
                     style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444' }}
+                    title="Remove Modification"
                   >
                     <Trash2 size={15} />
                   </button>
@@ -117,7 +179,7 @@ export function ModificationsView({ modifications, onRefresh, onOpenAdd }) {
 export function MaintenanceView({ reminders, onRefresh, onOpenAdd }) {
   return (
     <div className="page-body">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
         <div>
           <h1 className="greeting-title">Maintenance & Service Schedules</h1>
           <p className="greeting-subtitle">Keep vehicles in peak condition with automated alerts and service history.</p>
@@ -132,10 +194,10 @@ export function MaintenanceView({ reminders, onRefresh, onOpenAdd }) {
           <div key={r.id} className="card" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <span className={`tag-badge ${r.status === 'Upcoming' ? 'blue' : 'amber'}`}>{r.status}</span>
-              <span style={{ fontSize: 11, color: '#64748b' }}>{r.dueDate}</span>
+              <span style={{ fontSize: 11, color: '#64748b' }}>Due: {r.dueDate}</span>
             </div>
             <h3 style={{ fontSize: 15, fontWeight: 700 }}>{r.title}</h3>
-            <p style={{ fontSize: 12, color: '#64748b' }}>Due at {r.intervalKm?.toLocaleString()} km interval.</p>
+            <p style={{ fontSize: 12, color: '#64748b' }}>Due at {(r.intervalKm || 5000).toLocaleString()} km interval.</p>
             <button
               className="btn-secondary"
               style={{ marginTop: 'auto', fontSize: 12 }}
@@ -144,7 +206,7 @@ export function MaintenanceView({ reminders, onRefresh, onOpenAdd }) {
                 onRefresh();
               }}
             >
-              Mark Done
+              Mark Completed
             </button>
           </div>
         ))}
@@ -154,10 +216,14 @@ export function MaintenanceView({ reminders, onRefresh, onOpenAdd }) {
 }
 
 // 4. Fuel & Expenses View
-export function FuelExpensesView({ onOpenAdd }) {
+export function FuelExpensesView({ dashboardData, onOpenAdd }) {
+  const activities = dashboardData?.recentActivities || [];
+  const fuelEntries = activities.filter(a => a.type === 'fuel');
+  const expenseEntries = activities.filter(a => a.type === 'expense' || a.type === 'modification');
+
   return (
     <div className="page-body">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
         <div>
           <h1 className="greeting-title">Fuel Logs & Expense Ledger</h1>
           <p className="greeting-subtitle">Track consumption, octane grades, cost/km, and running costs.</p>
@@ -169,42 +235,32 @@ export function FuelExpensesView({ onOpenAdd }) {
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
         <div className="card">
-          <h2 className="card-title" style={{ marginBottom: 16 }}>Recent Fuel Refills</h2>
+          <h2 className="card-title" style={{ marginBottom: 16 }}>Fuel Refill History</h2>
           <div className="activity-list">
-            <div className="activity-item-row">
-              <div>
-                <div style={{ fontWeight: 600 }}>Shell V-Power 95 Octane</div>
-                <div style={{ fontSize: 11, color: '#64748b' }}>24.5 L @ ₹102/L • 13.8 km/l</div>
+            {fuelEntries.map((f) => (
+              <div key={f.id} className="activity-item-row">
+                <div>
+                  <div style={{ fontWeight: 600 }}>{f.title}</div>
+                  <div style={{ fontSize: 11, color: '#64748b' }}>{f.vehicleOrCategory}</div>
+                </div>
+                <strong style={{ color: '#2563eb' }}>₹ {Number(f.amount || 2500).toLocaleString()}</strong>
               </div>
-              <strong style={{ color: '#2563eb' }}>₹ 2,500</strong>
-            </div>
-            <div className="activity-item-row">
-              <div>
-                <div style={{ fontWeight: 600 }}>HP Power 95</div>
-                <div style={{ fontSize: 11, color: '#64748b' }}>18.0 L @ ₹101/L • 12.9 km/l</div>
-              </div>
-              <strong style={{ color: '#2563eb' }}>₹ 1,820</strong>
-            </div>
+            ))}
           </div>
         </div>
 
         <div className="card">
-          <h2 className="card-title" style={{ marginBottom: 16 }}>Other Vehicle Expenses</h2>
+          <h2 className="card-title" style={{ marginBottom: 16 }}>Modifications & Other Expenses</h2>
           <div className="activity-list">
-            <div className="activity-item-row">
-              <div>
-                <div style={{ fontWeight: 600 }}>Car Accessories & Floor Mats</div>
-                <div style={{ fontSize: 11, color: '#64748b' }}>10 Sep 2025 • Honda Civic</div>
+            {expenseEntries.map((e) => (
+              <div key={e.id} className="activity-item-row">
+                <div>
+                  <div style={{ fontWeight: 600 }}>{e.title}</div>
+                  <div style={{ fontSize: 11, color: '#64748b' }}>{e.vehicleOrCategory}</div>
+                </div>
+                <strong style={{ color: '#f59e0b' }}>₹ {Number(e.amount || 1500).toLocaleString()}</strong>
               </div>
-              <strong style={{ color: '#f59e0b' }}>₹ 3,200</strong>
-            </div>
-            <div className="activity-item-row">
-              <div>
-                <div style={{ fontWeight: 600 }}>Zero-Dep Comprehensive Insurance</div>
-                <div style={{ fontSize: 11, color: '#64748b' }}>Monthly installment</div>
-              </div>
-              <strong style={{ color: '#f59e0b' }}>₹ 1,875</strong>
-            </div>
+            ))}
           </div>
         </div>
       </div>
@@ -214,12 +270,21 @@ export function FuelExpensesView({ onOpenAdd }) {
 
 // 5. Analytics View
 export function AnalyticsView({ dashboardData }) {
+  const totalVehicles = dashboardData?.totalVehicles || 2;
+  const monthlyFuel = dashboardData?.monthlyFuelCost || 4320;
+  const totalExpenses = dashboardData?.totalExpensesMtd || 18750;
+
   return (
     <div className="page-body">
       <h1 className="greeting-title">Fleet Analytics & Insights</h1>
       <p className="greeting-subtitle">Cost per kilometer, fuel efficiency trends, and financial breakdown.</p>
 
       <div className="metrics-grid">
+        <div className="stat-card">
+          <div className="stat-label">Active Garage Fleet</div>
+          <div className="stat-value" style={{ color: '#2563eb' }}>{totalVehicles} Cars</div>
+          <div className="stat-card-sub" style={{ color: '#64748b' }}>Monitored vehicles</div>
+        </div>
         <div className="stat-card">
           <div className="stat-label">Average Fuel Economy</div>
           <div className="stat-value" style={{ color: '#10b981' }}>13.4 km/L</div>
@@ -228,17 +293,12 @@ export function AnalyticsView({ dashboardData }) {
         <div className="stat-card">
           <div className="stat-label">Running Cost per km</div>
           <div className="stat-value" style={{ color: '#2563eb' }}>₹ 7.82 / km</div>
-          <div className="stat-card-sub" style={{ color: '#64748b' }}>Including fuel & maintenance</div>
+          <div className="stat-card-sub" style={{ color: '#64748b' }}>Fuel & maintenance included</div>
         </div>
         <div className="stat-card">
-          <div className="stat-label">Total Garage Investment</div>
-          <div className="stat-value">₹ 43.3 L</div>
-          <div className="stat-card-sub" style={{ color: '#64748b' }}>Assets & Modifications</div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-label">Projected Annual Savings</div>
-          <div className="stat-value" style={{ color: '#10b981' }}>₹ 18,400</div>
-          <div className="stat-card-sub" style={{ color: '#64748b' }}>Preventative maintenance roi</div>
+          <div className="stat-label">MTD Expenses</div>
+          <div className="stat-value" style={{ color: '#0284c7' }}>₹ {totalExpenses.toLocaleString()}</div>
+          <div className="stat-card-sub" style={{ color: '#64748b' }}>Month-to-date spending</div>
         </div>
       </div>
     </div>
@@ -255,7 +315,6 @@ export function CommunityView({ posts, onLike, onBookmark, onRefresh }) {
     await api.createCommunityPost({
       authorName: 'Geethika',
       authorCar: 'Honda Civic',
-      timeAgo: 'Just now',
       content: newContent
     });
     setNewContent('');
@@ -287,23 +346,36 @@ export function CommunityView({ posts, onLike, onBookmark, onRefresh }) {
           <div key={post.id} className="card" style={{ padding: 18 }}>
             <div className="post-header" style={{ marginBottom: 10 }}>
               <div className="post-author-row">
-                <div className="post-author-avatar">{post.authorName?.charAt(0)}</div>
+                <div className="post-author-avatar">{post.authorName?.charAt(0) || 'G'}</div>
                 <div>
                   <div className="post-author-name">{post.authorName}</div>
-                  <div className="post-author-car-time">{post.authorCar} • {post.timeAgo}</div>
+                  <div className="post-author-car-time">{post.authorCar} • {post.timeAgo || 'Just now'}</div>
                 </div>
               </div>
             </div>
             <p style={{ fontSize: 13.5, lineHeight: 1.5, color: '#1e293b' }}>{post.content}</p>
             {post.imageUrl && (
-              <img src={post.imageUrl} alt="post" style={{ width: '100%', borderRadius: 8, marginTop: 10, height: 200, objectFit: 'cover' }} />
+              <img
+                src={post.imageUrl}
+                alt="post"
+                style={{ width: '100%', borderRadius: 8, marginTop: 10, height: 200, objectFit: 'cover' }}
+                onError={(e) => { e.target.style.display = 'none'; }}
+              />
             )}
             <div className="post-footer-actions" style={{ marginTop: 12 }}>
-              <button className="post-action-btn" onClick={() => onLike(post.id)}>
-                <ThumbsUp size={14} /> {post.likesCount} Likes
+              <button
+                className={`post-action-btn ${post.isLiked ? 'liked' : ''}`}
+                onClick={() => onLike(post.id)}
+                style={{ color: post.isLiked ? '#2563eb' : 'inherit', fontWeight: post.isLiked ? 700 : 500 }}
+              >
+                <ThumbsUp size={14} /> {post.likesCount || 0} Likes
               </button>
-              <button className="post-action-btn">
-                <MessageSquare size={14} /> {post.commentsCount} Comments
+              <button
+                className={`post-action-btn ${post.isBookmarked ? 'bookmarked' : ''}`}
+                onClick={() => onBookmark(post.id)}
+                style={{ color: post.isBookmarked ? '#f59e0b' : 'inherit' }}
+              >
+                Bookmark
               </button>
             </div>
           </div>
@@ -327,7 +399,7 @@ export function ReportsView({ dashboardData }) {
 
   return (
     <div className="page-body">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
         <div>
           <h1 className="greeting-title">Fleet Reports & Compliance</h1>
           <p className="greeting-subtitle">Export PDF & JSON summaries for insurance verification and resale provenance.</p>
@@ -342,8 +414,8 @@ export function ReportsView({ dashboardData }) {
         <p style={{ fontSize: 13, color: '#64748b', marginBottom: 16 }}>
           All recorded service timestamps, modification invoices, and fuel telemetry can be compiled into a tamper-evident maintenance portfolio.
         </p>
-        <button className="btn-secondary" onClick={() => alert('Generating PDF statement...')}>
-          Download PDF Statement
+        <button className="btn-secondary" onClick={() => window.print()}>
+          Print / PDF Statement
         </button>
       </div>
     </div>
