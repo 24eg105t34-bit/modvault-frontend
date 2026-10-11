@@ -222,6 +222,53 @@ async function syncToBackend(endpoint, method = 'GET', body = null) {
   return result;
 }
 
+// Global authentic automotive photo resolver for any car make & model in the world
+export async function fetchOriginalCarImage(make, model) {
+  if (!model && !make) return null;
+  const cleanMake = (make || '').trim();
+  const cleanModel = (model || '').trim();
+  const query = `${cleanMake} ${cleanModel}`.trim();
+
+  // 1. Exact model summary match
+  const title1 = `${cleanMake}_${cleanModel}`.replace(/\s+/g, '_');
+  try {
+    const res = await fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(title1)}`);
+    if (res.ok) {
+      const data = await res.json();
+      const img = data.originalimage?.source || data.thumbnail?.source;
+      if (img && !img.includes('disambig')) return img;
+    }
+  } catch (_) {}
+
+  // 2. Model only match
+  const title2 = cleanModel.replace(/\s+/g, '_');
+  try {
+    const res = await fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(title2)}`);
+    if (res.ok) {
+      const data = await res.json();
+      const img = data.originalimage?.source || data.thumbnail?.source;
+      if (img && !img.includes('disambig')) return img;
+    }
+  } catch (_) {}
+
+  // 3. Global Wikimedia Search match (covers ANY car, concept, hypercar, regional car)
+  try {
+    const searchUrl = `https://en.wikipedia.org/w/api.php?action=query&format=json&origin=*&generator=search&gsrsearch=${encodeURIComponent(query + ' car')}&gsrlimit=1&prop=pageimages&pithumbsize=1600`;
+    const res = await fetch(searchUrl);
+    if (res.ok) {
+      const data = await res.json();
+      if (data.query && data.query.pages) {
+        const pages = Object.values(data.query.pages);
+        if (pages.length > 0 && pages[0].thumbnail?.source) {
+          return pages[0].thumbnail.source;
+        }
+      }
+    }
+  } catch (_) {}
+
+  return null;
+}
+
 export const api = {
   // Auth
   login: async (data) => {
@@ -288,6 +335,19 @@ export const api = {
 
   createVehicle: async (data) => {
     const state = getStoredState();
+
+    // Auto-fetch the original authentic car photograph if not explicitly provided
+    let finalImageUrl = data.imageUrl && data.imageUrl.trim() ? data.imageUrl.trim() : '';
+    if (!finalImageUrl || finalImageUrl === '/images/bmw-330i.jpg' || finalImageUrl === '/images/civic-2019.jpg') {
+      try {
+        const autoImg = await fetchOriginalCarImage(data.make, data.model);
+        if (autoImg) finalImageUrl = autoImg;
+      } catch (_) {}
+    }
+    if (!finalImageUrl) {
+      finalImageUrl = '/images/civic-2019.jpg';
+    }
+
     const newVehicle = {
       id: Date.now(),
       make: data.make || 'Toyota',
@@ -301,8 +361,8 @@ export const api = {
       transmission: data.transmission || 'Automatic',
       isPrimary: Boolean(data.isPrimary || data.statusBadge === 'Primary'),
       statusBadge: data.statusBadge || (data.isPrimary ? 'Primary' : 'Project Build'),
-      imageUrl: data.imageUrl && data.imageUrl.trim() ? data.imageUrl.trim() : '/images/bmw-330i.jpg',
-      notes: data.notes || 'Registered in garage.'
+      imageUrl: finalImageUrl,
+      notes: data.notes || 'Registered in garage fleet.'
     };
 
     // If new car is primary, demote existing primaries

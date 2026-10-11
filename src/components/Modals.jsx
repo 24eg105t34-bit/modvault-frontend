@@ -1,14 +1,17 @@
-import React, { useState } from 'react';
-import { X, CheckCircle2, AlertTriangle, Car, Wrench, Fuel, DollarSign, Calculator, ShieldCheck } from 'lucide-react';
-import { api } from '../services/api';
+import React, { useState, useEffect } from 'react';
+import { X, CheckCircle2, AlertTriangle, Car, Wrench, Fuel, DollarSign, Calculator, ShieldCheck, Sparkles, Search } from 'lucide-react';
+import { api, fetchOriginalCarImage } from '../services/api';
 
 // 1. Add Vehicle Modal
 export function AddVehicleModal({ isOpen, onClose, onRefresh }) {
-  const PHOTO_PRESETS = [
-    { label: 'White Civic', url: '/images/civic-2019.jpg' },
-    { label: 'Black BMW 330i', url: '/images/bmw-330i.jpg' },
-    { label: 'Track Tuned Civic', url: '/images/build-civic.jpg' },
-    { label: 'Stock Civic', url: '/images/compare-stock.jpg' }
+  const QUICK_WORLD_CAR_PRESETS = [
+    { label: '🏎️ Toyota Supra', make: 'Toyota', model: 'Supra', year: 2024, trim: '3.0 Premium', engine: '3.0 L Turbo', fuel: 'Petrol' },
+    { label: '🏁 Porsche 911', make: 'Porsche', model: '911', year: 2024, trim: 'Carrera S', engine: '3.0 L Twin-Turbo', fuel: 'Petrol' },
+    { label: '🐎 Ford Mustang', make: 'Ford', model: 'Mustang', year: 2024, trim: 'GT V8', engine: '5.0 L Coyote V8', fuel: 'Petrol' },
+    { label: '🚙 Mahindra Thar', make: 'Mahindra', model: 'Thar', year: 2024, trim: 'LX 4x4 Hard Top', engine: '2.0 L mStallion Turbo', fuel: 'Diesel' },
+    { label: '⚡ Audi R8', make: 'Audi', model: 'R8', year: 2023, trim: 'V10 Performance', engine: '5.2 L FSI V10', fuel: 'Petrol' },
+    { label: '🚗 Honda Civic', make: 'Honda', model: 'Civic', year: 2019, trim: '1.8 i-VTEC', engine: '1.8 L i-VTEC', fuel: 'Petrol' },
+    { label: '🏎️ BMW 330i', make: 'BMW', model: '330i', year: 2022, trim: 'M Sport', engine: '2.0 L TwinPower Turbo', fuel: 'Petrol' }
   ];
 
   const [formData, setFormData] = useState({
@@ -23,11 +26,46 @@ export function AddVehicleModal({ isOpen, onClose, onRefresh }) {
     transmission: 'Automatic',
     isPrimary: false,
     statusBadge: 'Project Build',
-    imageUrl: '/images/bmw-330i.jpg',
+    imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/e/e5/2020_Toyota_GR_Supra_%28United_States%29.png',
     notes: 'Twin-scroll turbo build project for weekend circuit days.'
   });
   const [loading, setLoading] = useState(false);
+  const [searchingPhoto, setSearchingPhoto] = useState(false);
+  const [photoMatchMsg, setPhotoMatchMsg] = useState('Original Toyota Supra photography loaded');
   const [successMsg, setSuccessMsg] = useState(false);
+
+  // Auto fetch authentic car photo whenever make or model changes
+  const fetchCarPhoto = async (make, model) => {
+    if (!make && !model) return;
+    setSearchingPhoto(true);
+    setPhotoMatchMsg('');
+    try {
+      const url = await fetchOriginalCarImage(make, model);
+      if (url) {
+        setFormData(prev => ({ ...prev, imageUrl: url }));
+        setPhotoMatchMsg(`Authentic official photo loaded for ${make} ${model}`);
+      } else {
+        setPhotoMatchMsg(`Using default automotive press photo`);
+      }
+    } catch (_) {
+      setPhotoMatchMsg(`Auto-photo lookup ready`);
+    } finally {
+      setSearchingPhoto(false);
+    }
+  };
+
+  const selectPreset = (p) => {
+    setFormData(prev => ({
+      ...prev,
+      make: p.make,
+      model: p.model,
+      year: p.year,
+      trim: p.trim,
+      engineCapacity: p.engine,
+      fuelType: p.fuel
+    }));
+    fetchCarPhoto(p.make, p.model);
+  };
 
   if (!isOpen) return null;
 
@@ -51,7 +89,7 @@ export function AddVehicleModal({ isOpen, onClose, onRefresh }) {
 
   return (
     <div className="modal-overlay">
-      <div className="modal-box" style={{ maxWidth: 540 }}>
+      <div className="modal-box" style={{ maxWidth: 560 }}>
         <div className="modal-title-row">
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <Car size={20} color="#2563eb" />
@@ -64,27 +102,30 @@ export function AddVehicleModal({ isOpen, onClose, onRefresh }) {
 
         {successMsg && (
           <div style={{ background: '#ecfdf5', color: '#065f46', padding: '10px 14px', borderRadius: 8, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 600 }}>
-            <CheckCircle2 size={16} color="#10b981" /> Vehicle registered and added to garage fleet!
+            <CheckCircle2 size={16} color="#10b981" /> Vehicle registered with original car photo!
           </div>
         )}
 
         <form onSubmit={handleSubmit}>
-          {/* Photo Preset Selector */}
-          <div className="form-group" style={{ marginBottom: 14 }}>
-            <label className="form-label" style={{ marginBottom: 6 }}>Select Vehicle Photo Preset</label>
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 8 }}>
-              {PHOTO_PRESETS.map((p) => (
+          {/* Quick World Car Presets */}
+          <div className="form-group" style={{ marginBottom: 12 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+              <label className="form-label" style={{ marginBottom: 0 }}>1-Click World Car Presets</label>
+              <span style={{ fontSize: 11, color: '#2563eb', fontWeight: 600 }}>Or type ANY car model below</span>
+            </div>
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+              {QUICK_WORLD_CAR_PRESETS.map((p) => (
                 <button
-                  key={p.url}
+                  key={p.label}
                   type="button"
-                  onClick={() => setFormData({ ...formData, imageUrl: p.url })}
+                  onClick={() => selectPreset(p)}
                   style={{
-                    padding: '5px 10px',
+                    padding: '4px 9px',
                     borderRadius: 6,
-                    border: formData.imageUrl === p.url ? '2px solid #2563eb' : '1px solid #cbd5e1',
-                    background: formData.imageUrl === p.url ? '#eff6ff' : '#fff',
-                    color: formData.imageUrl === p.url ? '#1d4ed8' : '#475569',
-                    fontSize: 12,
+                    border: formData.make === p.make && formData.model === p.model ? '2px solid #2563eb' : '1px solid #cbd5e1',
+                    background: formData.make === p.make && formData.model === p.model ? '#eff6ff' : '#fff',
+                    color: formData.make === p.make && formData.model === p.model ? '#1d4ed8' : '#475569',
+                    fontSize: 11.5,
                     fontWeight: 600,
                     cursor: 'pointer'
                   }}
@@ -93,40 +134,73 @@ export function AddVehicleModal({ isOpen, onClose, onRefresh }) {
                 </button>
               ))}
             </div>
+          </div>
 
-            {/* Live photo preview */}
-            <div style={{ position: 'relative', width: '100%', height: 110, borderRadius: 8, overflow: 'hidden', border: '1px solid #e2e8f0', background: '#f8fafc' }}>
+          {/* Live Authentic Car Photo Preview */}
+          <div className="form-group" style={{ marginBottom: 14 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+              <label className="form-label" style={{ marginBottom: 0 }}>Original Car Photo (Auto-Fetched)</label>
+              <button
+                type="button"
+                onClick={() => fetchCarPhoto(formData.make, formData.model)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: '#2563eb',
+                  fontSize: 11.5,
+                  fontWeight: 600,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 4,
+                  cursor: 'pointer'
+                }}
+              >
+                <Sparkles size={12} /> {searchingPhoto ? 'Resolving...' : 'Auto-Fetch Original Photo'}
+              </button>
+            </div>
+
+            <div style={{ position: 'relative', width: '100%', height: 140, borderRadius: 10, overflow: 'hidden', border: '1px solid #cbd5e1', background: '#0f172a' }}>
               <img
                 src={formData.imageUrl || '/images/civic-2019.jpg'}
-                alt="Preview"
+                alt={`${formData.make} ${formData.model}`}
                 style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                 onError={(e) => { e.target.src = '/images/civic-2019.jpg'; }}
               />
-              <span style={{ position: 'absolute', bottom: 6, left: 8, background: 'rgba(0,0,0,0.65)', color: '#fff', fontSize: 11, padding: '2px 8px', borderRadius: 4 }}>
-                Photo Preview
-              </span>
+              <div style={{ position: 'absolute', bottom: 8, left: 10, background: 'rgba(15, 23, 42, 0.85)', backdropFilter: 'blur(4px)', color: '#fff', fontSize: 11, padding: '4px 10px', borderRadius: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span style={{ width: 7, height: 7, borderRadius: '50%', backgroundColor: '#10b981', display: 'inline-block' }} />
+                <span>{formData.make} {formData.model}</span>
+                {photoMatchMsg && <span style={{ color: '#94a3b8' }}>• {photoMatchMsg}</span>}
+              </div>
             </div>
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <div className="form-group">
-              <label className="form-label">Make</label>
+              <label className="form-label">Make (Brand)</label>
               <input
                 required
                 className="form-input"
-                placeholder="e.g. Honda, BMW, Toyota"
+                placeholder="e.g. Toyota, Porsche, Ford, Mahindra"
                 value={formData.make}
-                onChange={(e) => setFormData({ ...formData, make: e.target.value })}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setFormData({ ...formData, make: val });
+                }}
+                onBlur={() => fetchCarPhoto(formData.make, formData.model)}
               />
             </div>
             <div className="form-group">
-              <label className="form-label">Model</label>
+              <label className="form-label">Car Model</label>
               <input
                 required
                 className="form-input"
-                placeholder="e.g. Civic, 330i, Supra"
+                placeholder="e.g. Supra, 911, Mustang, Thar"
                 value={formData.model}
-                onChange={(e) => setFormData({ ...formData, model: e.target.value })}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setFormData({ ...formData, model: val });
+                }}
+                onBlur={() => fetchCarPhoto(formData.make, formData.model)}
               />
             </div>
           </div>
