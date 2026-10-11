@@ -23,7 +23,15 @@ export function GarageView({ vehicles, onRefresh, onOpenAdd }) {
         {vehicles.map((v) => (
           <div key={v.id} className="vehicle-card-item">
             <div className="vehicle-img-wrapper" style={{ height: 180 }}>
-              <img src={v.imageUrl} alt={v.model} className="vehicle-img" />
+              <img
+                src={v.imageUrl && !v.imageUrl.includes('unsplash')
+                  ? v.imageUrl
+                  : (v.model?.toLowerCase().includes('civic') || v.make?.toLowerCase().includes('honda')
+                      ? '/images/civic-2019.jpg'
+                      : '/images/bmw-330i.jpg')}
+                alt={v.model}
+                className="vehicle-img"
+              />
             </div>
             <div className="vehicle-content" style={{ padding: 18 }}>
               <div className="vehicle-title-row">

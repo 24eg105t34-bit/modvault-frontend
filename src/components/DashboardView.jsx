@@ -35,7 +35,7 @@ export default function DashboardView({
     estimatedCost: 250000,
     progressPercentage: 68,
     tags: 'Engine,Suspension,Wheels & Tyres,Exhaust,Exterior',
-    imageUrl: 'https://images.unsplash.com/photo-1590362891991-f776e747a588?auto=format&fit=crop&w=800&q=80'
+    imageUrl: '/images/build-civic.jpg'
   };
   const communityPosts = data.communityPosts || [];
 
@@ -144,11 +144,17 @@ export default function DashboardView({
               </div>
 
               <div className="vehicles-grid-inner">
-                {vehicles.slice(0, 2).map((vehicle) => (
+                {vehicles.slice(0, 2).map((vehicle) => {
+                  const vehicleImg = vehicle.imageUrl && !vehicle.imageUrl.includes('unsplash')
+                    ? vehicle.imageUrl
+                    : (vehicle.model?.toLowerCase().includes('civic') || vehicle.make?.toLowerCase().includes('honda')
+                        ? '/images/civic-2019.jpg'
+                        : '/images/bmw-330i.jpg');
+                  return (
                   <div key={vehicle.id} className="vehicle-card-item">
                     <div className="vehicle-img-wrapper">
                       <img
-                        src={vehicle.imageUrl || 'https://images.unsplash.com/photo-1590362891991-f776e747a588?auto=format&fit=crop&w=600&q=80'}
+                        src={vehicleImg}
                         alt={`${vehicle.make} ${vehicle.model}`}
                         className="vehicle-img"
                       />
@@ -192,7 +198,8 @@ export default function DashboardView({
                       </button>
                     </div>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
 
@@ -394,7 +401,7 @@ export default function DashboardView({
               <div className="compare-cars-row">
                 <div className="compare-car-box">
                   <img
-                    src="https://images.unsplash.com/photo-1590362891991-f776e747a588?auto=format&fit=crop&w=400&q=80"
+                    src="/images/compare-stock.jpg"
                     alt="Civic Stock"
                     className="compare-car-img"
                   />
@@ -407,7 +414,7 @@ export default function DashboardView({
 
                 <div className="compare-car-box" style={{ borderColor: '#2563eb' }}>
                   <img
-                    src="https://images.unsplash.com/photo-1617814076367-b759c7d7e738?auto=format&fit=crop&w=400&q=80"
+                    src="/images/compare-modified.jpg"
                     alt="Civic Modified"
                     className="compare-car-img"
                   />
@@ -546,9 +553,17 @@ export default function DashboardView({
 
                   {post.imageUrl && (
                     <div className="post-images-grid">
-                      <img src={post.imageUrl} alt="Car mod" className="post-img" />
+                      <img
+                        src={post.imageUrl.includes('unsplash') ? '/images/community-bmw-rear.jpg' : post.imageUrl}
+                        alt="Car mod"
+                        className="post-img"
+                      />
                       {post.additionalImageUrl && (
-                        <img src={post.additionalImageUrl} alt="Car exhaust" className="post-img" />
+                        <img
+                          src={post.additionalImageUrl.includes('unsplash') ? '/images/community-bmw-exhaust.jpg' : post.additionalImageUrl}
+                          alt="Car exhaust"
+                          className="post-img"
+                        />
                       )}
                     </div>
                   )}

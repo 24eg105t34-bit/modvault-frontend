@@ -16,7 +16,7 @@ export function AddVehicleModal({ isOpen, onClose, onRefresh }) {
     transmission: 'Automatic',
     isPrimary: false,
     statusBadge: 'Project',
-    imageUrl: 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=900&q=80',
+    imageUrl: '/images/bmw-330i.jpg',
     notes: ''
   });
   const [loading, setLoading] = useState(false);
@@ -883,7 +883,7 @@ export function BuildComparisonModal({ isOpen, onClose, comparisonData }) {
     torque: '174 Nm',
     suspension: 'OEM Struts',
     exhaust: 'Factory Twin Resonator',
-    imageUrl: 'https://images.unsplash.com/photo-1590362891991-f776e747a588?auto=format&fit=crop&w=800&q=80'
+    imageUrl: '/images/compare-stock.jpg'
   };
 
   const modified = comparisonData?.modified || {
@@ -894,7 +894,7 @@ export function BuildComparisonModal({ isOpen, onClose, comparisonData }) {
     torque: '290 Nm',
     suspension: 'BC Racing Coilovers (32-way)',
     exhaust: 'Full Cat-back Stainless Steel',
-    imageUrl: 'https://images.unsplash.com/photo-1617814076367-b759c7d7e738?auto=format&fit=crop&w=800&q=80'
+    imageUrl: '/images/compare-modified.jpg'
   };
 
   return (

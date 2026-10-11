@@ -17,7 +17,9 @@ import {
   Moon,
   ChevronDown,
   Settings,
-  ArrowRight
+  ArrowRight,
+  Github,
+  ExternalLink
 } from 'lucide-react';
 import { api } from './services/api';
 import DashboardView from './components/DashboardView';
@@ -50,6 +52,7 @@ export default function App() {
 
   // Modal states
   const [activeModal, setActiveModal] = useState(null); // 'addVehicle', 'addMod', 'logMaintenance', 'addFuel', 'costCalc', 'compatCheck', 'compareBuilds'
+  const [showUserMenu, setShowUserMenu] = useState(false);
 
   const loadData = async () => {
     try {
@@ -184,22 +187,32 @@ export default function App() {
           </div>
           <div className="profile-info">
             <div className="profile-name">{dashboardData?.userFullName || 'Geethika'}</div>
-            <div className="profile-email">geethika@gmail.com</div>
+            <a
+              href="mailto:24eg105t34@anurag.edu.in"
+              className="profile-email"
+              title="Student Email: 24eg105t34@anurag.edu.in"
+              style={{ textDecoration: 'none', color: '#94a3b8', display: 'block', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}
+            >
+              24eg105t34@anurag.edu.in
+            </a>
           </div>
-          <button
+          <a
+            href="https://github.com/24eg105t44-max"
+            target="_blank"
+            rel="noopener noreferrer"
             className="profile-settings-btn"
-            title="Garage Settings"
-            onClick={() => alert('ModVault Garage Settings: User Geethika | Backend Connected')}
+            title="GitHub Account (24eg105t34@anurag.edu.in)"
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none', color: '#94a3b8' }}
           >
-            <Settings size={16} />
-          </button>
+            <Github size={16} />
+          </a>
         </div>
       </aside>
 
       {/* 2. Main Content Wrapper */}
       <div className="main-wrapper">
         {/* Top Header */}
-        <header className="top-header">
+        <header className="top-header" style={{ position: 'relative' }}>
           <div className="search-bar-box">
             <Search size={16} color="#94a3b8" />
             <input
@@ -212,6 +225,17 @@ export default function App() {
           </div>
 
           <div className="header-right-actions">
+            <a
+              href="https://github.com/24eg105t44-max"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="icon-btn"
+              title="GitHub Account: 24eg105t34@anurag.edu.in"
+              style={{ textDecoration: 'none', color: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+            >
+              <Github size={18} />
+            </a>
+
             <button className="icon-btn" title="Notifications">
               <Bell size={18} />
               <span className="badge-dot" />
@@ -225,15 +249,90 @@ export default function App() {
               {darkMode ? <Sun size={18} /> : <Sun size={18} />}
             </button>
 
-            <button className="user-dropdown-btn">
-              <div className="header-avatar">
-                {dashboardData?.userFullName ? dashboardData.userFullName.charAt(0) : 'G'}
-              </div>
-              <span className="user-greeting-name">
-                Hi, {dashboardData?.userFullName || 'Geethika'}
-              </span>
-              <ChevronDown size={14} color="#64748b" />
-            </button>
+            <div style={{ position: 'relative' }}>
+              <button
+                className="user-dropdown-btn"
+                onClick={() => setShowUserMenu(!showUserMenu)}
+              >
+                <div className="header-avatar">
+                  {dashboardData?.userFullName ? dashboardData.userFullName.charAt(0) : 'G'}
+                </div>
+                <span className="user-greeting-name">
+                  Hi, {dashboardData?.userFullName || 'Geethika'}
+                </span>
+                <ChevronDown size={14} color="#64748b" />
+              </button>
+
+              {showUserMenu && (
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: '115%',
+                    right: 0,
+                    width: 270,
+                    backgroundColor: darkMode ? '#1e293b' : '#ffffff',
+                    border: '1px solid rgba(226, 232, 240, 0.8)',
+                    borderRadius: 10,
+                    boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)',
+                    zIndex: 9999,
+                    padding: 12,
+                    fontSize: 13
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10, paddingBottom: 10, borderBottom: '1px solid rgba(148, 163, 184, 0.2)' }}>
+                    <div style={{ width: 36, height: 36, borderRadius: '50%', backgroundColor: '#2563eb', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700 }}>
+                      G
+                    </div>
+                    <div>
+                      <div style={{ fontWeight: 600 }}>Geethika</div>
+                      <div style={{ fontSize: 11, color: '#64748b' }}>Roll: 24EG105T34</div>
+                      <div style={{ fontSize: 11, color: '#2563eb' }}>24eg105t34@anurag.edu.in</div>
+                    </div>
+                  </div>
+
+                  <div style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', marginBottom: 6 }}>
+                    GitHub Repositories
+                  </div>
+                  <a
+                    href="https://github.com/24eg105t44-max/modvault-frontend"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 8px', borderRadius: 6, textDecoration: 'none', color: 'inherit', marginBottom: 4 }}
+                    className="menu-item-hover"
+                  >
+                    <Github size={14} />
+                    <span>Frontend Repo</span>
+                    <ExternalLink size={12} style={{ marginLeft: 'auto', color: '#94a3b8' }} />
+                  </a>
+                  <a
+                    href="https://github.com/24eg105t44-max/modvault-backend"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 8px', borderRadius: 6, textDecoration: 'none', color: 'inherit', marginBottom: 4 }}
+                    className="menu-item-hover"
+                  >
+                    <Github size={14} />
+                    <span>Backend Repo (Java)</span>
+                    <ExternalLink size={12} style={{ marginLeft: 'auto', color: '#94a3b8' }} />
+                  </a>
+                  <a
+                    href="https://github.com/24eg105t44-max"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 8px', borderRadius: 6, textDecoration: 'none', color: 'inherit', marginBottom: 8 }}
+                    className="menu-item-hover"
+                  >
+                    <ExternalLink size={14} />
+                    <span>GitHub Profile</span>
+                  </a>
+
+                  <div style={{ paddingTop: 8, borderTop: '1px solid rgba(148, 163, 184, 0.2)', fontSize: 11, color: '#10b981', display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span style={{ width: 7, height: 7, borderRadius: '50%', backgroundColor: '#10b981', display: 'inline-block' }} />
+                    Spring Boot 3 + Java 21 REST API
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </header>
 

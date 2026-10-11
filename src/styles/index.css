@@ -172,10 +172,10 @@ body {
 .sidebar-cta-card {
   margin-top: auto;
   margin-bottom: 20px;
-  background: linear-gradient(180deg, rgba(30, 41, 59, 0.6) 0%, rgba(15, 23, 42, 0.9) 100%),
-              url('https://images.unsplash.com/photo-1617814076367-b759c7d7e738?auto=format&fit=crop&w=400&q=70');
+  background: linear-gradient(180deg, rgba(15, 23, 42, 0.4) 0%, rgba(11, 19, 41, 0.92) 100%),
+              url('/images/sidebar-promo.jpg');
   background-size: cover;
-  background-position: center;
+  background-position: center top;
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: var(--radius-md);
   padding: 18px 14px;
