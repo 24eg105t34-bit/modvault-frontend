@@ -10,6 +10,69 @@ export const getAuthToken = () => localStorage.getItem('modvault_token');
 export const setAuthToken = (token) => localStorage.setItem('modvault_token', token);
 export const removeAuthToken = () => localStorage.removeItem('modvault_token');
 
+const USER_SESSION_KEY = 'modvault_user';
+const USERS_DB_KEY = 'modvault_users_db';
+
+export const getStoredUser = () => {
+  try {
+    const raw = localStorage.getItem(USER_SESSION_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch (_) {}
+  return null;
+};
+
+export const setStoredUser = (user) => {
+  try {
+    if (user) {
+      localStorage.setItem(USER_SESSION_KEY, JSON.stringify(user));
+    } else {
+      localStorage.removeItem(USER_SESSION_KEY);
+    }
+  } catch (_) {}
+};
+
+export const clearAuth = () => {
+  removeAuthToken();
+  setStoredUser(null);
+};
+
+export const getStoredUsersDb = () => {
+  try {
+    const data = localStorage.getItem(USERS_DB_KEY);
+    if (data) return JSON.parse(data);
+  } catch (_) {}
+  // Default seeded users for instant login & testing
+  const defaults = [
+    {
+      id: 1,
+      email: '24eg105t34@anurag.edu.in',
+      password: 'password123',
+      fullName: 'Geethika',
+      avatarLetter: 'G',
+      role: 'Garage Master'
+    },
+    {
+      id: 2,
+      email: 'geethika@gmail.com',
+      password: 'password123',
+      fullName: 'Geethika',
+      avatarLetter: 'G',
+      role: 'Enthusiast'
+    }
+  ];
+  try {
+    localStorage.setItem(USERS_DB_KEY, JSON.stringify(defaults));
+  } catch (_) {}
+  return defaults;
+};
+
+export const saveStoredUsersDb = (users) => {
+  try {
+    localStorage.setItem(USERS_DB_KEY, JSON.stringify(users));
+  } catch (_) {}
+};
+
+
 // Screenshot-exact initial dataset
 const INITIAL_DATASET = {
   greeting: 'Good morning, Geethika 👋',
@@ -269,25 +332,169 @@ export async function fetchOriginalCarImage(make, model) {
   return null;
 }
 
+// High-fidelity Auth HTTP helper preserving backend error responses
+async function requestAuthJson(endpoint, body) {
+  const urls = [
+    `${API_BASE_URL}${endpoint}`,
+    ...(API_BASE_URL !== LOCAL_BACKEND_URL ? [`${LOCAL_BACKEND_URL}${endpoint}`] : [])
+  ];
+
+  for (const url of urls) {
+    const ctrl = new AbortController();
+    const timeoutId = setTimeout(() => ctrl.abort(), 3500);
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+        signal: ctrl.signal
+      });
+      clearTimeout(timeoutId);
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data?.message || 'Authentication failed');
+      }
+      return data;
+    } catch (err) {
+      clearTimeout(timeoutId);
+      // Re-throw if it's an explicit server rejection message (e.g., bad credentials or duplicate email)
+      if (err.message && !err.message.includes('fetch') && !err.message.includes('Network') && !err.message.includes('abort')) {
+        throw err;
+      }
+    }
+  }
+  return null;
+}
+
 export const api = {
   // Auth
-  login: async (data) => {
-    const remote = await syncToBackend('/auth/login', 'POST', data);
-    if (remote && remote.token) {
-      setAuthToken(remote.token);
-      return remote;
+  login: async (credentials) => {
+    const email = (credentials.email || '').trim().toLowerCase();
+    const password = credentials.password || '';
+
+    if (!email || !password) {
+      throw new Error('Please enter both email and password');
     }
-    return { token: 'mock_jwt_token', userFullName: 'Geethika', email: data.email };
+
+    // 1. Try real backend
+    try {
+      const remote = await requestAuthJson('/auth/login', { email, password });
+      if (remote && remote.token) {
+        setAuthToken(remote.token);
+        const userObj = {
+          id: remote.id,
+          email: remote.email,
+          fullName: remote.fullName,
+          avatarLetter: remote.avatarLetter || remote.fullName?.charAt(0).toUpperCase() || 'U',
+          role: remote.role || 'Garage Master'
+        };
+        setStoredUser(userObj);
+        return { success: true, token: remote.token, user: userObj };
+      }
+    } catch (err) {
+      // Backend responded with explicit rejection (e.g. Invalid password)
+      throw err;
+    }
+
+    // 2. Client-side local resilience (for standalone Vercel preview or offline)
+    const users = getStoredUsersDb();
+    const matched = users.find(u => u.email.toLowerCase() === email);
+
+    if (!matched || matched.password !== password) {
+      throw new Error('Invalid email or password. Please verify and try again.');
+    }
+
+    const mockToken = 'jwt_' + btoa(`${matched.email}:${Date.now()}`);
+    setAuthToken(mockToken);
+    const userObj = {
+      id: matched.id,
+      email: matched.email,
+      fullName: matched.fullName,
+      avatarLetter: matched.avatarLetter || matched.fullName?.charAt(0).toUpperCase() || 'U',
+      role: matched.role || 'Garage Master'
+    };
+    setStoredUser(userObj);
+    return { success: true, token: mockToken, user: userObj };
   },
 
   register: async (data) => {
-    const remote = await syncToBackend('/auth/register', 'POST', data);
-    return remote || { success: true, message: 'User registered' };
+    const email = (data.email || '').trim().toLowerCase();
+    const password = data.password || '';
+    const fullName = (data.fullName || '').trim() || 'Driver';
+    const role = data.role || 'Enthusiast';
+    const avatarLetter = fullName.charAt(0).toUpperCase();
+
+    if (!email || !password) {
+      throw new Error('Email and password are required');
+    }
+    if (password.length < 6) {
+      throw new Error('Password must be at least 6 characters long');
+    }
+
+    // 1. Try real backend
+    try {
+      const remote = await requestAuthJson('/auth/register', { email, password, fullName });
+      if (remote && remote.token) {
+        setAuthToken(remote.token);
+        const userObj = {
+          id: remote.id,
+          email: remote.email,
+          fullName: remote.fullName,
+          avatarLetter: remote.avatarLetter || avatarLetter,
+          role: remote.role || role
+        };
+        setStoredUser(userObj);
+        return { success: true, token: remote.token, user: userObj };
+      }
+    } catch (err) {
+      throw err;
+    }
+
+    // 2. Client-side local fallback
+    const users = getStoredUsersDb();
+    if (users.some(u => u.email.toLowerCase() === email)) {
+      throw new Error('An account with this email already exists. Please Sign In.');
+    }
+
+    const newUser = {
+      id: Date.now(),
+      email,
+      password,
+      fullName,
+      avatarLetter,
+      role
+    };
+    users.push(newUser);
+    saveStoredUsersDb(users);
+
+    const mockToken = 'jwt_' + btoa(`${email}:${Date.now()}`);
+    setAuthToken(mockToken);
+    const userObj = {
+      id: newUser.id,
+      email: newUser.email,
+      fullName: newUser.fullName,
+      avatarLetter: newUser.avatarLetter,
+      role: newUser.role
+    };
+    setStoredUser(userObj);
+    return { success: true, token: mockToken, user: userObj };
+  },
+
+  logout: () => {
+    clearAuth();
+    return { success: true };
   },
 
   getCurrentUser: async () => {
+    const stored = getStoredUser();
+    if (stored) return stored;
+
     const remote = await syncToBackend('/auth/me');
-    return remote || { fullName: 'Geethika', email: '24eg105t34@anurag.edu.in', rollNo: '24EG105T34' };
+    if (remote && remote.email) {
+      setStoredUser(remote);
+      return remote;
+    }
+    return null;
   },
 
   // Dashboard

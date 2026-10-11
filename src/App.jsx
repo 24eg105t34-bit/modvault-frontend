@@ -19,9 +19,14 @@ import {
   Settings,
   ArrowRight,
   Github,
-  ExternalLink
+  ExternalLink,
+  LogIn,
+  UserPlus,
+  LogOut,
+  UserCheck
 } from 'lucide-react';
-import { api } from './services/api';
+import { api, getStoredUser } from './services/api';
+import { AuthModal } from './components/AuthModal';
 import DashboardView from './components/DashboardView';
 import {
   GarageView,
@@ -187,6 +192,54 @@ export default function App() {
   const [selectedVehicle, setSelectedVehicle] = useState(null);
   const [loading, setLoading] = useState(false);
 
+  // Authentication State
+  const [currentUser, setCurrentUser] = useState(() => {
+    try {
+      const isLoggedOut = localStorage.getItem('modvault_logged_out');
+      if (isLoggedOut === 'true') return null;
+      const stored = getStoredUser();
+      if (stored) return stored;
+    } catch (_) {}
+    return {
+      id: 1,
+      fullName: 'Geethika',
+      email: '24eg105t34@anurag.edu.in',
+      avatarLetter: 'G',
+      role: 'Garage Master'
+    };
+  });
+
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [authModalMode, setAuthModalMode] = useState('signin');
+
+  const handleOpenAuth = (mode = 'signin') => {
+    setAuthModalMode(mode);
+    setAuthModalOpen(true);
+    setShowUserMenu(false);
+  };
+
+  const handleAuthSuccess = (user) => {
+    localStorage.removeItem('modvault_logged_out');
+    setCurrentUser(user);
+    setDashboardData((prev) => ({
+      ...prev,
+      userFullName: user.fullName,
+      greeting: `Good morning, ${user.fullName} 👋`
+    }));
+  };
+
+  const handleSignOut = () => {
+    api.logout();
+    localStorage.setItem('modvault_logged_out', 'true');
+    setCurrentUser(null);
+    setShowUserMenu(false);
+    setDashboardData((prev) => ({
+      ...prev,
+      userFullName: 'Guest Driver',
+      greeting: 'Welcome to ModVault Garage 👋'
+    }));
+  };
+
   // Modal states
   const [activeModal, setActiveModal] = useState(null); // 'addVehicle', 'vehicleDetails', 'addMod', 'logMaintenance', 'addFuel', 'costCalc', 'compatCheck', 'compareBuilds'
   const [showUserMenu, setShowUserMenu] = useState(false);
@@ -198,6 +251,13 @@ export default function App() {
         api.getBuildComparison()
       ]);
       if (dash) {
+        if (currentUser) {
+          dash.userFullName = currentUser.fullName;
+          dash.greeting = `Good morning, ${currentUser.fullName} 👋`;
+        } else {
+          dash.userFullName = 'Guest Driver';
+          dash.greeting = 'Welcome to ModVault Garage 👋';
+        }
         setDashboardData(dash);
       }
       if (comp) {
@@ -323,30 +383,62 @@ export default function App() {
 
         {/* Bottom User Profile */}
         <div className="sidebar-profile">
-          <div className="profile-avatar-circle">
-            {dashboardData?.userFullName ? dashboardData.userFullName.charAt(0) : 'G'}
-          </div>
-          <div className="profile-info">
-            <div className="profile-name">{dashboardData?.userFullName || 'Geethika'}</div>
-            <a
-              href="mailto:24eg105t34@anurag.edu.in"
-              className="profile-email"
-              title="Student Email: 24eg105t34@anurag.edu.in"
-              style={{ textDecoration: 'none', color: '#94a3b8', display: 'block', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}
-            >
-              24eg105t34@anurag.edu.in
-            </a>
-          </div>
-          <a
-            href="https://github.com/24eg105t34-bit"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="profile-settings-btn"
-            title="GitHub Account (24eg105t34@anurag.edu.in)"
-            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none', color: '#94a3b8' }}
+          <div
+            className="profile-avatar-circle"
+            style={{ cursor: 'pointer' }}
+            onClick={() => handleOpenAuth('signin')}
+            title={currentUser ? `${currentUser.fullName} (${currentUser.role || 'Member'})` : 'Sign In'}
           >
-            <Github size={16} />
-          </a>
+            {currentUser?.avatarLetter || (currentUser?.fullName ? currentUser.fullName.charAt(0) : '?')}
+          </div>
+          <div className="profile-info" style={{ overflow: 'hidden' }}>
+            <div className="profile-name" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {currentUser?.fullName || 'Guest Driver'}
+              </span>
+              {currentUser && (
+                <span style={{ fontSize: 9.5, padding: '1px 5px', borderRadius: 4, background: 'rgba(37, 99, 235, 0.1)', color: '#2563eb', fontWeight: 600, flexShrink: 0 }}>
+                  {currentUser.role || 'Member'}
+                </span>
+              )}
+            </div>
+            {currentUser ? (
+              <span
+                className="profile-email"
+                title={currentUser.email}
+                style={{ color: '#94a3b8', display: 'block', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}
+              >
+                {currentUser.email}
+              </span>
+            ) : (
+              <button
+                type="button"
+                onClick={() => handleOpenAuth('signin')}
+                style={{ background: 'none', border: 'none', color: '#2563eb', fontSize: 11.5, padding: 0, cursor: 'pointer', textAlign: 'left', fontWeight: 600 }}
+              >
+                Sign In / Join →
+              </button>
+            )}
+          </div>
+          {currentUser ? (
+            <button
+              onClick={handleSignOut}
+              className="profile-settings-btn"
+              title="Sign Out"
+              style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: '#94a3b8', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+            >
+              <LogOut size={16} />
+            </button>
+          ) : (
+            <button
+              onClick={() => handleOpenAuth('signin')}
+              className="profile-settings-btn"
+              title="Sign In"
+              style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+            >
+              <LogIn size={16} />
+            </button>
+          )}
         </div>
       </aside>
 
@@ -387,93 +479,170 @@ export default function App() {
               title="Toggle Theme"
               onClick={() => setDarkMode(!darkMode)}
             >
-              {darkMode ? <Sun size={18} /> : <Sun size={18} />}
+              {darkMode ? <Sun size={18} /> : <Moon size={18} />}
             </button>
 
-            <div style={{ position: 'relative' }}>
-              <button
-                className="user-dropdown-btn"
-                onClick={() => setShowUserMenu(!showUserMenu)}
-              >
-                <div className="header-avatar">
-                  {dashboardData?.userFullName ? dashboardData.userFullName.charAt(0) : 'G'}
-                </div>
-                <span className="user-greeting-name">
-                  Hi, {dashboardData?.userFullName || 'Geethika'}
-                </span>
-                <ChevronDown size={14} color="#64748b" />
-              </button>
-
-              {showUserMenu && (
-                <div
-                  style={{
-                    position: 'absolute',
-                    top: '115%',
-                    right: 0,
-                    width: 270,
-                    backgroundColor: darkMode ? '#1e293b' : '#ffffff',
-                    border: '1px solid rgba(226, 232, 240, 0.8)',
-                    borderRadius: 10,
-                    boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)',
-                    zIndex: 9999,
-                    padding: 12,
-                    fontSize: 13
-                  }}
+            {currentUser ? (
+              <div style={{ position: 'relative' }}>
+                <button
+                  className="user-dropdown-btn"
+                  onClick={() => setShowUserMenu(!showUserMenu)}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10, paddingBottom: 10, borderBottom: '1px solid rgba(148, 163, 184, 0.2)' }}>
-                    <div style={{ width: 36, height: 36, borderRadius: '50%', backgroundColor: '#2563eb', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700 }}>
-                      G
-                    </div>
-                    <div>
-                      <div style={{ fontWeight: 600 }}>Geethika</div>
-                      <div style={{ fontSize: 11, color: '#64748b' }}>Roll: 24EG105T34</div>
-                      <div style={{ fontSize: 11, color: '#2563eb' }}>24eg105t34@anurag.edu.in</div>
-                    </div>
+                  <div className="header-avatar">
+                    {currentUser.avatarLetter || currentUser.fullName?.charAt(0) || 'U'}
                   </div>
+                  <span className="user-greeting-name">
+                    Hi, {currentUser.fullName}
+                  </span>
+                  <ChevronDown size={14} color="#64748b" />
+                </button>
 
-                  <div style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', marginBottom: 6 }}>
-                    GitHub Repositories
-                  </div>
-                  <a
-                    href="https://github.com/24eg105t34-bit/modvault-frontend"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 8px', borderRadius: 6, textDecoration: 'none', color: 'inherit', marginBottom: 4 }}
-                    className="menu-item-hover"
+                {showUserMenu && (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top: '115%',
+                      right: 0,
+                      width: 280,
+                      backgroundColor: darkMode ? '#1e293b' : '#ffffff',
+                      border: '1px solid rgba(226, 232, 240, 0.8)',
+                      borderRadius: 10,
+                      boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)',
+                      zIndex: 9999,
+                      padding: 14,
+                      fontSize: 13
+                    }}
                   >
-                    <Github size={14} />
-                    <span>Frontend Repo</span>
-                    <ExternalLink size={12} style={{ marginLeft: 'auto', color: '#94a3b8' }} />
-                  </a>
-                  <a
-                    href="https://github.com/24eg105t34-bit/modvault-backend"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 8px', borderRadius: 6, textDecoration: 'none', color: 'inherit', marginBottom: 4 }}
-                    className="menu-item-hover"
-                  >
-                    <Github size={14} />
-                    <span>Backend Repo (Java)</span>
-                    <ExternalLink size={12} style={{ marginLeft: 'auto', color: '#94a3b8' }} />
-                  </a>
-                  <a
-                    href="https://github.com/24eg105t34-bit"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 8px', borderRadius: 6, textDecoration: 'none', color: 'inherit', marginBottom: 8 }}
-                    className="menu-item-hover"
-                  >
-                    <ExternalLink size={14} />
-                    <span>GitHub Profile</span>
-                  </a>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12, paddingBottom: 10, borderBottom: '1px solid rgba(148, 163, 184, 0.2)' }}>
+                      <div style={{ width: 38, height: 38, borderRadius: '50%', backgroundColor: '#2563eb', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 16 }}>
+                        {currentUser.avatarLetter || currentUser.fullName?.charAt(0) || 'U'}
+                      </div>
+                      <div style={{ overflow: 'hidden' }}>
+                        <div style={{ fontWeight: 600, color: 'var(--text-main)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {currentUser.fullName}
+                        </div>
+                        <div style={{ fontSize: 11, color: '#2563eb', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {currentUser.email}
+                        </div>
+                        <div style={{ fontSize: 10.5, color: '#64748b', marginTop: 2 }}>
+                          Role: <span style={{ color: '#10b981', fontWeight: 600 }}>{currentUser.role || 'Garage Master'}</span>
+                        </div>
+                      </div>
+                    </div>
 
-                  <div style={{ paddingTop: 8, borderTop: '1px solid rgba(148, 163, 184, 0.2)', fontSize: 11, color: '#10b981', display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <span style={{ width: 7, height: 7, borderRadius: '50%', backgroundColor: '#10b981', display: 'inline-block' }} />
-                    Spring Boot 3 + Java 21 REST API
+                    {/* Switch Account / Sign In as another user */}
+                    <button
+                      type="button"
+                      onClick={() => handleOpenAuth('signin')}
+                      style={{
+                        width: '100%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 8,
+                        padding: '8px 10px',
+                        borderRadius: 6,
+                        border: '1px solid var(--border-color)',
+                        background: 'var(--bg-main)',
+                        color: 'var(--text-main)',
+                        cursor: 'pointer',
+                        fontSize: 12.5,
+                        fontWeight: 500,
+                        marginBottom: 8
+                      }}
+                    >
+                      <UserCheck size={14} color="#2563eb" />
+                      <span>Switch Account / Sign In</span>
+                    </button>
+
+                    {/* Sign Out */}
+                    <button
+                      type="button"
+                      onClick={handleSignOut}
+                      style={{
+                        width: '100%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 8,
+                        padding: '8px 10px',
+                        borderRadius: 6,
+                        border: '1px solid #fee2e2',
+                        background: '#fef2f2',
+                        color: '#b91c1c',
+                        cursor: 'pointer',
+                        fontSize: 12.5,
+                        fontWeight: 600,
+                        marginBottom: 10
+                      }}
+                    >
+                      <LogOut size={14} />
+                      <span>Sign Out</span>
+                    </button>
+
+                    <div style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', marginBottom: 6, paddingTop: 4, borderTop: '1px solid rgba(148, 163, 184, 0.2)' }}>
+                      GitHub Repositories
+                    </div>
+                    <a
+                      href="https://github.com/24eg105t34-bit/modvault-frontend"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 8px', borderRadius: 6, textDecoration: 'none', color: 'inherit', marginBottom: 4 }}
+                      className="menu-item-hover"
+                    >
+                      <Github size={13} />
+                      <span>Frontend Repo</span>
+                      <ExternalLink size={11} style={{ marginLeft: 'auto', color: '#94a3b8' }} />
+                    </a>
+                    <a
+                      href="https://github.com/24eg105t34-bit/modvault-backend"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 8px', borderRadius: 6, textDecoration: 'none', color: 'inherit', marginBottom: 4 }}
+                      className="menu-item-hover"
+                    >
+                      <Github size={13} />
+                      <span>Backend Repo (Java)</span>
+                      <ExternalLink size={11} style={{ marginLeft: 'auto', color: '#94a3b8' }} />
+                    </a>
+                    <a
+                      href="https://github.com/24eg105t34-bit"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 8px', borderRadius: 6, textDecoration: 'none', color: 'inherit', marginBottom: 8 }}
+                      className="menu-item-hover"
+                    >
+                      <ExternalLink size={13} />
+                      <span>GitHub Profile</span>
+                    </a>
+
+                    <div style={{ paddingTop: 8, borderTop: '1px solid rgba(148, 163, 184, 0.2)', fontSize: 11, color: '#10b981', display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <span style={{ width: 7, height: 7, borderRadius: '50%', backgroundColor: '#10b981', display: 'inline-block' }} />
+                      Spring Boot 3 + Java 21 REST API
+                    </div>
                   </div>
-                </div>
-              )}
-            </div>
+                )}
+              </div>
+            ) : (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <button
+                  type="button"
+                  className="btn-auth-signin"
+                  onClick={() => handleOpenAuth('signin')}
+                  title="Sign In to your garage account"
+                >
+                  <LogIn size={15} />
+                  <span>Sign In</span>
+                </button>
+                <button
+                  type="button"
+                  className="btn-auth-signup"
+                  onClick={() => handleOpenAuth('signup')}
+                  title="Create a new garage account"
+                >
+                  <UserPlus size={15} />
+                  <span>Sign Up</span>
+                </button>
+              </div>
+            )}
           </div>
         </header>
 
@@ -601,6 +770,14 @@ export default function App() {
         isOpen={activeModal === 'compareBuilds'}
         onClose={() => setActiveModal(null)}
         comparisonData={comparisonData}
+      />
+
+      {/* Authentication Modal (Sign In & Sign Up) */}
+      <AuthModal
+        isOpen={authModalOpen}
+        onClose={() => setAuthModalOpen(false)}
+        initialMode={authModalMode}
+        onSuccess={handleAuthSuccess}
       />
     </div>
   );
