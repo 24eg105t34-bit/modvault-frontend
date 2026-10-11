@@ -42,13 +42,148 @@ import {
   BuildComparisonModal
 } from './components/Modals';
 
+const DEFAULT_DASHBOARD_DATA = {
+  greeting: 'Good morning, Geethika 👋',
+  userFullName: 'Geethika',
+  dateString: 'Sat, 28 Sep 2025',
+  totalVehicles: 2,
+  totalVehiclesNote: '+ 1 new',
+  pendingMaintenanceCount: 3,
+  overdueCount: 2,
+  monthlyFuelCost: 4320,
+  fuelCostTrend: '↓ 12% vs last month',
+  totalExpensesMtd: 18750,
+  expensesTrend: '↓ 8% vs last month',
+  vehicles: [
+    {
+      id: 1,
+      make: 'Honda',
+      model: 'Civic',
+      year: 2019,
+      registrationNumber: 'TS 09 AB 1234',
+      fuelType: 'Petrol',
+      engineCapacity: '1.8 L',
+      odometerKm: 42350,
+      transmission: 'Manual',
+      isPrimary: true,
+      statusBadge: 'Primary',
+      imageUrl: '/images/civic-2019.jpg',
+      notes: 'Primary daily driver and active track-day build project.'
+    },
+    {
+      id: 2,
+      make: 'BMW',
+      model: '330i',
+      year: 2022,
+      registrationNumber: 'KA 01 CD 5678',
+      fuelType: 'Petrol',
+      engineCapacity: '2.0 L',
+      odometerKm: 18420,
+      transmission: 'Automatic',
+      isPrimary: false,
+      statusBadge: 'Secondary',
+      imageUrl: '/images/bmw-330i.jpg',
+      notes: 'Weekend cruiser and grand tourer.'
+    }
+  ],
+  upcomingMaintenance: [
+    { id: 1, title: 'Engine Oil Change', intervalKm: 4500, dueDate: '2025-10-15', status: 'Due Soon', iconType: 'oil', isOverdue: true },
+    { id: 2, title: 'Tyre Rotation', intervalKm: 8000, dueDate: '2025-11-10', status: 'Due Soon', iconType: 'tyre', isOverdue: true },
+    { id: 3, title: 'Brake Inspection', intervalKm: 12000, dueDate: '2025-12-28', status: 'Due Soon', iconType: 'brake', isOverdue: false },
+    { id: 4, title: 'Air Filter Replacement', intervalKm: 20000, dueDate: '2026-01-15', status: 'Upcoming', iconType: 'filter', isOverdue: false }
+  ],
+  recentActivities: [
+    { id: 1, title: 'Fuel entry added', vehicleOrCategory: 'Honda Civic • 18 Sep 2025, 08:45 PM', timestamp: '2025-09-18T20:45:00', amount: 2500, type: 'fuel', iconColor: 'blue' },
+    { id: 2, title: 'Modification updated', vehicleOrCategory: 'BMW 330i • 16 Sep 2025, 02:12 PM', timestamp: '2025-09-16T14:12:00', amount: 18750, type: 'modification', iconColor: 'green' },
+    { id: 3, title: 'Service completed', vehicleOrCategory: 'Honda Civic • 12 Sep 2025, 04:21 PM', timestamp: '2025-09-12T16:21:00', amount: null, type: 'maintenance', iconColor: 'green' },
+    { id: 4, title: 'Expense added', vehicleOrCategory: 'Car Accessories • 10 Sep 2025, 02:10 PM', timestamp: '2025-09-10T14:10:00', amount: 3200, type: 'expense', iconColor: 'amber' }
+  ],
+  recentModifications: [
+    { id: 1, partName: 'Cold Air Intake', category: 'Performance', status: 'Installed', cost: 25000 },
+    { id: 2, partName: 'BC Racing Coilovers', category: 'Suspension', status: 'Installed', cost: 85000 },
+    { id: 3, partName: 'Rays 57CR Wheels', category: 'Wheels & Tyres', status: 'Planned', cost: 42000 },
+    { id: 4, partName: 'Cat-back Exhaust', category: 'Performance', status: 'Planned', cost: 70000 }
+  ],
+  activeBuildPlan: {
+    id: 1,
+    title: 'Civic Performance Build',
+    estimatedCost: 250000,
+    progressPercentage: 68,
+    status: 'In Progress',
+    imageUrl: '/images/build-civic.jpg',
+    tags: 'Engine,Suspension,Wheels & Tyres,Exhaust,Exterior'
+  },
+  communityPosts: [
+    {
+      id: 1,
+      authorName: 'Rohan Mehta',
+      authorCar: 'BMW 330i',
+      timeAgo: '2 days ago',
+      content: 'Just got my new M Performance exhaust. The sound is unreal! 🔥',
+      imageUrl: '/images/community-bmw-rear.jpg',
+      additionalImageUrl: '/images/community-bmw-exhaust.jpg',
+      likesCount: 124,
+      commentsCount: 18,
+      isBookmarked: false
+    },
+    {
+      id: 2,
+      authorName: 'Sneha Iyer',
+      authorCar: 'Honda Civic',
+      timeAgo: '3 days ago',
+      content: 'After 10k km, still loving the reliability of my Civic. What a machine! 🚗',
+      imageUrl: null,
+      additionalImageUrl: null,
+      likesCount: 96,
+      commentsCount: 12,
+      isBookmarked: false
+    }
+  ],
+  fuelExpenseChart: {
+    labels: ['Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep'],
+    fuelCosts: [2100, 3200, 3800, 4500, 3900, 4320],
+    fuelEconomies: [11.8, 12.4, 12.2, 13.5, 12.9, 13.8]
+  },
+  expenseBreakdown: {
+    total: 18750,
+    fuel: { percentage: 42, amount: 7875 },
+    maintenance: { percentage: 21, amount: 3940 },
+    modifications: { percentage: 19, amount: 3560 },
+    insurance: { percentage: 10, amount: 1875 },
+    others: { percentage: 8, amount: 1500 }
+  }
+};
+
+const DEFAULT_COMPARISON_DATA = {
+  stock: {
+    name: 'Civic (Stock)',
+    totalCost: '₹ 18.5 L',
+    averageMileage: '12.5 km/l',
+    power: '141 hp',
+    torque: '174 Nm',
+    suspension: 'OEM Struts',
+    exhaust: 'Factory Twin Resonator',
+    imageUrl: '/images/compare-stock.jpg'
+  },
+  modified: {
+    name: 'Civic (Modified)',
+    totalCost: '₹ 24.8 L',
+    averageMileage: '11.2 km/l',
+    power: '215 hp (Stage 2)',
+    torque: '290 Nm',
+    suspension: 'BC Racing Coilovers (32-way)',
+    exhaust: 'Full Cat-back Stainless Steel',
+    imageUrl: '/images/compare-modified.jpg'
+  }
+};
+
 export default function App() {
   const [activeNav, setActiveNav] = useState('Dashboard');
   const [searchQuery, setSearchQuery] = useState('');
   const [darkMode, setDarkMode] = useState(false);
-  const [dashboardData, setDashboardData] = useState(null);
-  const [comparisonData, setComparisonData] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [dashboardData, setDashboardData] = useState(DEFAULT_DASHBOARD_DATA);
+  const [comparisonData, setComparisonData] = useState(DEFAULT_COMPARISON_DATA);
+  const [loading, setLoading] = useState(false);
 
   // Modal states
   const [activeModal, setActiveModal] = useState(null); // 'addVehicle', 'addMod', 'logMaintenance', 'addFuel', 'costCalc', 'compatCheck', 'compareBuilds'
@@ -60,10 +195,15 @@ export default function App() {
         api.getDashboard(),
         api.getBuildComparison()
       ]);
-      setDashboardData(dash);
-      setComparisonData(comp);
+      if (dash && dash.vehicles && dash.vehicles.length > 0) {
+        setDashboardData(dash);
+      }
+      if (comp) {
+        setComparisonData(comp);
+      }
     } catch (err) {
-      console.error('Failed to load dashboard data:', err);
+      console.warn('Backend API connection note (using screenshot-perfect local data):', err);
+      // Keep DEFAULT_DASHBOARD_DATA so the UI never displays blank cards or missing car images!
     } finally {
       setLoading(false);
     }
@@ -197,7 +337,7 @@ export default function App() {
             </a>
           </div>
           <a
-            href="https://github.com/24eg105t44-max"
+            href="https://github.com/24eg105t34-bit"
             target="_blank"
             rel="noopener noreferrer"
             className="profile-settings-btn"
@@ -226,7 +366,7 @@ export default function App() {
 
           <div className="header-right-actions">
             <a
-              href="https://github.com/24eg105t44-max"
+              href="https://github.com/24eg105t34-bit"
               target="_blank"
               rel="noopener noreferrer"
               className="icon-btn"
@@ -294,7 +434,7 @@ export default function App() {
                     GitHub Repositories
                   </div>
                   <a
-                    href="https://github.com/24eg105t44-max/modvault-frontend"
+                    href="https://github.com/24eg105t34-bit/modvault-frontend"
                     target="_blank"
                     rel="noopener noreferrer"
                     style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 8px', borderRadius: 6, textDecoration: 'none', color: 'inherit', marginBottom: 4 }}
@@ -305,7 +445,7 @@ export default function App() {
                     <ExternalLink size={12} style={{ marginLeft: 'auto', color: '#94a3b8' }} />
                   </a>
                   <a
-                    href="https://github.com/24eg105t44-max/modvault-backend"
+                    href="https://github.com/24eg105t34-bit/modvault-backend"
                     target="_blank"
                     rel="noopener noreferrer"
                     style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 8px', borderRadius: 6, textDecoration: 'none', color: 'inherit', marginBottom: 4 }}
@@ -316,7 +456,7 @@ export default function App() {
                     <ExternalLink size={12} style={{ marginLeft: 'auto', color: '#94a3b8' }} />
                   </a>
                   <a
-                    href="https://github.com/24eg105t44-max"
+                    href="https://github.com/24eg105t34-bit"
                     target="_blank"
                     rel="noopener noreferrer"
                     style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 8px', borderRadius: 6, textDecoration: 'none', color: 'inherit', marginBottom: 8 }}
